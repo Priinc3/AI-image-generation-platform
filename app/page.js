@@ -17,14 +17,15 @@ const FEATURES = [
       'Brand promise closer'
     ],
     link: '/amazon-pdp',
-    cta: 'Generate PDP Images'
+    cta: 'Generate PDP Images',
+    accent: '#4F46E5'
   },
   {
     icon: '🎨',
     title: 'Single Image Generator',
     description: 'Create stunning product images with custom prompts and style presets.',
     features: [
-      '6 style presets',
+      '8 style presets',
       'Custom prompts',
       'Reference image support',
       'Multiple variations',
@@ -32,7 +33,8 @@ const FEATURES = [
       'Instant download'
     ],
     link: '/single-image',
-    cta: 'Generate Single Image'
+    cta: 'Generate Single Image',
+    accent: '#7C3AED'
   }
 ];
 
@@ -40,17 +42,20 @@ const STEPS = [
   {
     number: '01',
     title: 'Upload Your Product',
-    description: 'Drop your product image and paste the raw description or features.'
+    description: 'Drop your product image and paste the raw description or features.',
+    icon: '📤'
   },
   {
     number: '02',
     title: 'AI Generates Images',
-    description: 'Our AI analyzes your product and creates professional, e-commerce ready images.'
+    description: 'Our AI analyzes your product and creates professional, e-commerce ready images.',
+    icon: '✨'
   },
   {
     number: '03',
     title: 'Download & Use',
-    description: 'Preview, download individual images or the full set as a ZIP file.'
+    description: 'Preview, download individual images or the full set as a ZIP file.',
+    icon: '⬇️'
   }
 ];
 
@@ -60,22 +65,56 @@ export default function HomePage() {
       <Navbar />
       <main className="page-wrapper">
         {/* Hero Section */}
-        <section className="hero">
-          <div className="container">
-            <div className="hero-badge">
-              <div className="hero-badge-dot"></div>
-              <span>Powered by Google Gemini AI</span>
+        <section style={{
+          padding: 'var(--spacing-3xl) 0',
+          textAlign: 'center',
+          background: 'linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%)',
+        }}>
+          <div className="container" style={{ maxWidth: '800px' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 16px',
+              background: 'var(--bg-card)',
+              borderRadius: '50px',
+              border: '1px solid var(--border-color)',
+              marginBottom: 'var(--spacing-lg)',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }}></span>
+              Powered by Google Gemini AI
             </div>
-            <h1 className="hero-title">
-              Generate Professional
-              <br />
-              <span className="hero-title-accent">Product Images with AI</span>
+
+            <h1 style={{
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              fontWeight: '700',
+              lineHeight: '1.2',
+              marginBottom: 'var(--spacing-lg)',
+              color: 'var(--text-primary)',
+            }}>
+              Generate Professional<br />
+              <span style={{ color: 'var(--accent-primary)' }}>Product Images with AI</span>
             </h1>
-            <p className="hero-description">
+
+            <p style={{
+              fontSize: '1.1rem',
+              color: 'var(--text-secondary)',
+              marginBottom: 'var(--spacing-xl)',
+              maxWidth: '600px',
+              margin: '0 auto var(--spacing-xl)',
+            }}>
               Create stunning Amazon PDP listings and e-commerce product images in seconds.
               No design skills required. Just upload, describe, and download.
             </p>
-            <div className="hero-buttons">
+
+            <div style={{
+              display: 'flex',
+              gap: 'var(--spacing-md)',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+            }}>
               <Link href="/amazon-pdp" className="btn btn-primary btn-lg">
                 📦 Amazon PDP Generator
               </Link>
@@ -87,26 +126,92 @@ export default function HomePage() {
         </section>
 
         {/* Features Section */}
-        <section className="features">
+        <section style={{ padding: 'var(--spacing-3xl) 0' }}>
           <div className="container">
-            <div className="section-header">
-              <h2 className="section-title">Choose Your Generator</h2>
-              <p className="section-subtitle">
+            <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-2xl)' }}>
+              <h2 style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                marginBottom: 'var(--spacing-sm)',
+                color: 'var(--text-primary)',
+              }}>
+                Choose Your Generator
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
                 Two powerful tools for all your product image needs
               </p>
             </div>
-            <div className="features-grid">
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: 'var(--spacing-xl)',
+              maxWidth: '900px',
+              margin: '0 auto',
+            }}>
               {FEATURES.map((feature) => (
-                <div key={feature.title} className="feature-card">
-                  <div className="feature-icon">{feature.icon}</div>
-                  <h3 className="feature-title">{feature.title}</h3>
-                  <p className="feature-description">{feature.description}</p>
-                  <ul className="feature-list">
+                <div key={feature.title} style={{
+                  background: 'var(--bg-card)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-color)',
+                  padding: 'var(--spacing-xl)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}>
+                  <div style={{
+                    fontSize: '2.5rem',
+                    marginBottom: 'var(--spacing-md)',
+                  }}>
+                    {feature.icon}
+                  </div>
+
+                  <h3 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '600',
+                    marginBottom: 'var(--spacing-sm)',
+                    color: 'var(--text-primary)',
+                  }}>
+                    {feature.title}
+                  </h3>
+
+                  <p style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.95rem',
+                    marginBottom: 'var(--spacing-lg)',
+                    lineHeight: '1.6',
+                  }}>
+                    {feature.description}
+                  </p>
+
+                  <ul style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: '0 0 var(--spacing-xl) 0',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 'var(--spacing-xs)',
+                    flex: 1,
+                  }}>
                     {feature.features.map((item) => (
-                      <li key={item}>{item}</li>
+                      <li key={item} style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}>
+                        <span style={{ color: '#10B981' }}>✓</span>
+                        {item}
+                      </li>
                     ))}
                   </ul>
-                  <Link href={feature.link} className="btn btn-primary">
+
+                  <Link
+                    href={feature.link}
+                    className="btn btn-primary"
+                    style={{ width: '100%', textAlign: 'center' }}
+                  >
                     {feature.cta} →
                   </Link>
                 </div>
@@ -116,29 +221,84 @@ export default function HomePage() {
         </section>
 
         {/* How It Works */}
-        <section className="features" style={{ background: 'var(--bg-secondary)', padding: 'var(--spacing-3xl) 0' }}>
+        <section style={{
+          padding: 'var(--spacing-3xl) 0',
+          background: 'var(--bg-secondary)',
+        }}>
           <div className="container">
-            <div className="section-header">
-              <h2 className="section-title">How It Works</h2>
-              <p className="section-subtitle">
+            <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-2xl)' }}>
+              <h2 style={{
+                fontSize: '2rem',
+                fontWeight: '700',
+                marginBottom: 'var(--spacing-sm)',
+                color: 'var(--text-primary)',
+              }}>
+                How It Works
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
                 Three simple steps to professional product images
               </p>
             </div>
-            <div className="features-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-              {STEPS.map((step) => (
-                <div key={step.number} className="feature-card" style={{ textAlign: 'center' }}>
-                  <div
-                    className="feature-icon"
-                    style={{
-                      margin: '0 auto var(--spacing-lg)',
-                      fontSize: '1.5rem',
-                      fontWeight: '800',
-                    }}
-                  >
-                    {step.number}
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: 'var(--spacing-xl)',
+              maxWidth: '900px',
+              margin: '0 auto',
+            }}>
+              {STEPS.map((step, index) => (
+                <div key={step.number} style={{
+                  background: 'var(--bg-card)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-color)',
+                  padding: 'var(--spacing-xl)',
+                  textAlign: 'center',
+                  position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: '-12px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'var(--accent-primary)',
+                    color: 'white',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                  }}>
+                    {index + 1}
                   </div>
-                  <h3 className="feature-title">{step.title}</h3>
-                  <p className="feature-description">{step.description}</p>
+
+                  <div style={{
+                    fontSize: '2rem',
+                    marginBottom: 'var(--spacing-md)',
+                    marginTop: 'var(--spacing-sm)',
+                  }}>
+                    {step.icon}
+                  </div>
+
+                  <h3 style={{
+                    fontSize: '1.1rem',
+                    fontWeight: '600',
+                    marginBottom: 'var(--spacing-sm)',
+                    color: 'var(--text-primary)',
+                  }}>
+                    {step.title}
+                  </h3>
+
+                  <p style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.9rem',
+                    lineHeight: '1.6',
+                  }}>
+                    {step.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -146,24 +306,67 @@ export default function HomePage() {
         </section>
 
         {/* CTA Section */}
-        <section className="features">
+        <section style={{ padding: 'var(--spacing-3xl) 0' }}>
           <div className="container">
             <div style={{
               textAlign: 'center',
               padding: 'var(--spacing-3xl)',
-              background: 'var(--bg-card)',
+              background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
               borderRadius: 'var(--radius-xl)',
-              border: '1px solid var(--border-color)'
+              color: 'white',
             }}>
-              <h2 className="section-title">Ready to Create Amazing Product Images?</h2>
-              <p className="section-subtitle" style={{ marginBottom: 'var(--spacing-xl)' }}>
+              <h2 style={{
+                fontSize: '1.75rem',
+                fontWeight: '700',
+                marginBottom: 'var(--spacing-md)',
+              }}>
+                Ready to Create Amazing Product Images?
+              </h2>
+              <p style={{
+                opacity: 0.9,
+                marginBottom: 'var(--spacing-xl)',
+                fontSize: '1rem',
+              }}>
                 Start generating professional e-commerce images in seconds
               </p>
-              <div className="hero-buttons">
-                <Link href="/amazon-pdp" className="btn btn-primary btn-lg">
+              <div style={{
+                display: 'flex',
+                gap: 'var(--spacing-md)',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+              }}>
+                <Link
+                  href="/amazon-pdp"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 24px',
+                    background: 'white',
+                    color: '#4F46E5',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    transition: 'all 0.2s',
+                  }}
+                >
                   Get Started Free →
                 </Link>
-                <Link href="/gallery" className="btn btn-secondary btn-lg">
+                <Link
+                  href="/gallery"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 24px',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    transition: 'all 0.2s',
+                  }}
+                >
                   View Your Gallery
                 </Link>
               </div>
@@ -172,9 +375,15 @@ export default function HomePage() {
         </section>
 
         {/* Footer */}
-        <footer className="footer">
+        <footer style={{
+          padding: 'var(--spacing-xl) 0',
+          borderTop: '1px solid var(--border-color)',
+          textAlign: 'center',
+        }}>
           <div className="container">
-            <p>© 2024 ImageGen AI. Powered by Google Gemini.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              © 2024 ImageGen AI. Powered by Google Gemini.
+            </p>
           </div>
         </footer>
       </main>
