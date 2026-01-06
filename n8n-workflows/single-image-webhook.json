@@ -1,0 +1,268 @@
+{
+    "name": "Single Image Generator - Webhook (S3)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "single-image",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                0,
+                300
+            ],
+            "id": "webhook-trigger",
+            "name": "Webhook Trigger",
+            "webhookId": "single-image-webhook"
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list"
+                },
+                "prompt": "={{ $json.body.prompt }}\n\ncreativity: {{ $json.body.creativity }}",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                240,
+                200
+            ],
+            "id": "image-gen-1",
+            "name": "Generate Image 1",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_CREDENTIAL_ID",
+                    "name": "Your Google Gemini API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list"
+                },
+                "prompt": "={{ $json.body.prompt }}\n\ncreativity: {{ $json.body.creativity }}",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                240,
+                400
+            ],
+            "id": "image-gen-2",
+            "name": "Generate Image 2",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_CREDENTIAL_ID",
+                    "name": "Your Google Gemini API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "upload",
+                "bucketName": "amazon-image-data",
+                "fileName": "=Single_Variant1_{{ $now.format('yyyy-MM-dd_HH-mm-ss') }}_{{ $now.millisecond }}",
+                "binaryPropertyName": "edited",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.awsS3",
+            "typeVersion": 2,
+            "position": [
+                480,
+                200
+            ],
+            "id": "upload-s3-1",
+            "name": "Upload to S3 - Variant 1",
+            "credentials": {
+                "aws": {
+                    "id": "YOUR_AWS_CREDENTIAL_ID",
+                    "name": "AWS (IAM) account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "upload",
+                "bucketName": "amazon-image-data",
+                "fileName": "=Single_Variant2_{{ $now.format('yyyy-MM-dd_HH-mm-ss') }}_{{ $now.millisecond }}",
+                "binaryPropertyName": "edited",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.awsS3",
+            "typeVersion": 2,
+            "position": [
+                480,
+                400
+            ],
+            "id": "upload-s3-2",
+            "name": "Upload to S3 - Variant 2",
+            "credentials": {
+                "aws": {
+                    "id": "YOUR_AWS_CREDENTIAL_ID",
+                    "name": "AWS (IAM) account"
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3.2,
+            "position": [
+                720,
+                300
+            ],
+            "id": "merge-images",
+            "name": "Merge All Uploads"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Collect S3 URLs from all uploaded images\nconst items = $input.all();\n\nconst images = items.map((item, index) => {\n    return {\n        url: item.json.Location || '',\n        name: item.json.Key || `variant_${index + 1}`,\n        bucket: item.json.Bucket || 'amazon-image-data'\n    };\n}).filter(img => img.url);\n\nreturn [{ \n    json: { \n        success: images.length > 0,\n        count: images.length,\n        images: images \n    } \n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                960,
+                300
+            ],
+            "id": "collect-urls",
+            "name": "Collect S3 URLs"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1200,
+                300
+            ],
+            "id": "respond-webhook",
+            "name": "Respond to Webhook"
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Image 1",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Generate Image 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Image 1": {
+            "main": [
+                [
+                    {
+                        "node": "Upload to S3 - Variant 1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Image 2": {
+            "main": [
+                [
+                    {
+                        "node": "Upload to S3 - Variant 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Upload to S3 - Variant 1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge All Uploads",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Upload to S3 - Variant 2": {
+            "main": [
+                [
+                    {
+                        "node": "Merge All Uploads",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "Merge All Uploads": {
+            "main": [
+                [
+                    {
+                        "node": "Collect S3 URLs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Collect S3 URLs": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": {
+        "templateCredsSetupCompleted": true
+    },
+    "tags": []
+}

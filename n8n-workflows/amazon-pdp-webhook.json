@@ -1,0 +1,502 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "amazon-pdp",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                656,
+                1600
+            ],
+            "id": "8c1180d4-11b1-4c85-87cd-daab66226655",
+            "name": "Webhook Trigger",
+            "webhookId": "amazon-pdp-webhook"
+        },
+        {
+            "parameters": {
+                "options": {
+                    "temperature": 0.3
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                960,
+                1824
+            ],
+            "id": "397aaf55-4fec-4f5d-a199-03fccdfaa49e",
+            "name": "Extract Product Data",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse AI output and normalize product data\nconst input = $input.first();\n\n// Get binary image from webhook\nconst webhookData = $('Webhook Trigger').first();\nconst binaryData = webhookData.binary;\nconst extraPrompt = webhookData.json.body?.extra_prompt || '';\n\n// Get raw text from AI response\nlet rawText = input.json.text || input.json.content || input.json.message?.content || input.json.output || '';\n\n// If rawText is an object, stringify it\nif (typeof rawText === 'object') {\n  rawText = JSON.stringify(rawText);\n}\n\n// Remove markdown code fences if present\nrawText = rawText\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/\\s*```$/i, '')\n  .trim();\n\n// Handle escaped newlines\nrawText = rawText.replace(/\\\\n/g, '\\n');\n\n// Extract JSON from the response\nlet extracted;\ntry {\n  extracted = JSON.parse(rawText);\n} catch (e) {\n  // Try to find JSON object in the text\n  const jsonMatch = rawText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      extracted = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      throw new Error('Could not parse AI response as JSON: ' + rawText.substring(0, 200));\n    }\n  } else {\n    throw new Error('No JSON found in AI response: ' + rawText.substring(0, 200));\n  }\n}\n\n// Normalize helper functions\nconst toArray = (val) => {\n  if (Array.isArray(val)) return val.filter(v => v && String(v).trim());\n  if (typeof val === 'string' && val.trim()) {\n    return val.split(/[,;\\n]/).map(s => s.trim()).filter(Boolean);\n  }\n  return [];\n};\n\nconst toString = (val) => {\n  if (typeof val === 'string') return val.trim();\n  if (Array.isArray(val)) return val.join(', ');\n  return '';\n};\n\n// Normalized output\nconst productData = {\n  brand_name: toString(extracted.brand_name) || 'Premium Brand',\n  product_name: toString(extracted.product_name) || 'Natural Product',\n  tagline: toString(extracted.tagline) || 'Quality You Can Trust',\n  ingredients: toArray(extracted.ingredients),\n  benefits: toArray(extracted.benefits),\n  usage: toArray(extracted.usage),\n  claims: toArray(extracted.claims),\n  trust_info: toArray(extracted.trust_info),\n  shelf_life: toString(extracted.shelf_life),\n  origin: toString(extracted.origin),\n  extra_prompt: extraPrompt,\n  \n  // Pre-formatted strings for prompts\n  ingredients_text: toArray(extracted.ingredients).slice(0, 5).join(', ') || 'Natural Ingredients',\n  benefits_text: toArray(extracted.benefits).slice(0, 4).map(b => '• ' + b).join('\\n') || '• Premium Quality',\n  usage_text: toArray(extracted.usage).slice(0, 3).map(u => '• ' + u).join('\\n') || '• Everyday Use',\n  claims_text: toArray(extracted.claims).slice(0, 4).join(' | ') || 'Premium Quality',\n  trust_text: toArray(extracted.trust_info).slice(0, 4).join(' | ') || 'Certified Quality'\n};\n\n// Return with binary data passed through from Webhook Trigger\n// The binary image will be available as $binary.image in downstream nodes\nreturn [{ json: productData, binary: binaryData }];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1232,
+                1600
+            ],
+            "id": "e94000aa-cd46-4010-ab21-a5df6c4823fd",
+            "name": "Normalize Product Data"
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "=You are generating an Amazon product detail page HERO image.\n\nBrand: {{ $json.brand_name }}\nProduct: {{ $json.product_name }}\nTagline: {{ $json.tagline }}\n\nIMAGE REQUIREMENTS:\n- Premium Amazon PDP hero shot\n- Product bottle/package centered prominently\n- Clean white or soft gradient background\n- Professional studio lighting with soft shadows\n- Slight reflection on surface\n- Brand name and tagline displayed elegantly\n- Modern, premium e-commerce aesthetic\n- High contrast, sharp details\n\nReference product image provided - KEEP THE EXACT PRODUCT PACKAGING.\nDo NOT redesign or distort the label.\n\nThis is IMAGE 1 of 6 in the Amazon listing set.",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                1456,
+                1120
+            ],
+            "id": "ef75060e-f3e0-4752-9408-96934667e88e",
+            "name": "Generate Hero Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "=You are generating an Amazon product detail page INGREDIENTS image.\n\nBrand: {{ $json.brand_name }}\nProduct: {{ $json.product_name }}\nKey Ingredients: {{ $json.ingredients_text }}\n\nIMAGE REQUIREMENTS:\n- Product bottle positioned on LEFT side (30% of frame)\n- RIGHT side shows ingredient visualization\n- Display each ingredient with small illustrated icons or realistic photos\n- Clean infographic layout\n- Text header: \"Key Ingredients\" or \"What's Inside\"\n- Ingredient labels next to each icon\n- Same lighting and background style as hero image\n- Soft connecting lines from ingredients to product\n- Premium Amazon PDP aesthetic\n\nThis is IMAGE 2 of 6 in the Amazon listing set.",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                1456,
+                1312
+            ],
+            "id": "01dd06fb-7514-42e0-809c-9861418e4f42",
+            "name": "Generate Ingredients Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "=You are generating an Amazon product detail page BENEFITS image.\n\nBrand: {{ $json.brand_name }}\nProduct: {{ $json.product_name }}\nBenefits:\n{{ $json.benefits_text }}\n\nIMAGE REQUIREMENTS:\n- Product bottle positioned on LEFT side\n- RIGHT side shows benefits as bullet points or icons\n- Use simple, clean icons next to each benefit\n- Text header: \"Why Choose {{ $json.product_name }}?\" or \"Benefits\"\n- Balanced grid or vertical list layout\n- Readable sans-serif typography\n- Same lighting and premium background as other images\n- Professional Amazon infographic style\n\nThis is IMAGE 3 of 6 in the Amazon listing set.",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                1456,
+                1504
+            ],
+            "id": "f7a759d7-e005-4d67-8427-9638b8729529",
+            "name": "Generate Benefits Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "=You are generating an Amazon product detail page CLEAN LABEL / TRUST image.\n\nBrand: {{ $json.brand_name }}\nProduct: {{ $json.product_name }}\nTrust Claims: {{ $json.claims_text }}\nCertifications: {{ $json.trust_text }}\n\nIMAGE REQUIREMENTS:\n- Product bottle CENTERED prominently\n- Trust badges and certification icons arranged around product\n- Show claims like: No Artificial Colors, No Preservatives, etc.\n- Display certifications: FSSAI, Organic, etc. as badge icons\n- Clean, minimal layout focused on trust\n- Green checkmarks or shield icons for trust signals\n- Text header: \"Clean & Safe\" or \"Our Promise\"\n- Same premium lighting and background\n- Professional trust-focused Amazon aesthetic\n\nThis is IMAGE 4 of 6 in the Amazon listing set.",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                1456,
+                1696
+            ],
+            "id": "2d9d2bb5-8a91-4820-b7ec-ea1df77061f6",
+            "name": "Generate Trust Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "=You are generating an Amazon product detail page USAGE / LIFESTYLE image.\n\nBrand: {{ $json.brand_name }}\nProduct: {{ $json.product_name }}\nUsage Occasions:\n{{ $json.usage_text }}\n\nIMAGE REQUIREMENTS:\n- Lifestyle-oriented composition\n- Product shown in USE CONTEXT (on table, being held, etc.)\n- Warm, inviting atmosphere\n- Show usage occasions as text overlays or small scene vignettes\n- Text header: \"Perfect For\" or \"How To Enjoy\"\n- Friendly, relatable aesthetic\n- Soft natural lighting feel\n- People hands or lifestyle props optional\n- Same brand colors and premium feel\n\nThis is IMAGE 5 of 6 in the Amazon listing set.",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                1456,
+                1888
+            ],
+            "id": "b1f0d384-daeb-4d65-bf61-135cc6f6632f",
+            "name": "Generate Usage Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "=You are generating an Amazon product detail page BRAND PROMISE image.\n\nBrand: {{ $json.brand_name }}\nProduct: {{ $json.product_name }}\nTagline: {{ $json.tagline }}\nOrigin: {{ $json.origin }}\nShelf Life: {{ $json.shelf_life }}\n\nIMAGE REQUIREMENTS:\n- Final closing image for the listing\n- Product bottle slightly angled, prominent\n- Brand promise messaging:\n  - \"{{ $json.tagline }}\"\n  - Made in {{ $json.origin }}\n  - {{ $json.shelf_life }} Shelf Life (if available)\n- Strong brand identity colors\n- Premium, confident composition\n- Call-to-action feel: \"Try {{ $json.product_name }} Today\"\n- Same lighting and premium background as other images\n- Professional Amazon closing slide aesthetic\n\nThis is IMAGE 6 of 6 - the FINAL image in the Amazon listing set.",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                1456,
+                2080
+            ],
+            "id": "babafe32-4052-404d-8cd3-6d3688727ec2",
+            "name": "Generate Brand Promise Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Collect all images from converted base64 data\nconst items = $input.all();\n\nconst imageNames = [\n  '01_Hero',\n  '02_Ingredients',\n  '03_Benefits',\n  '04_Trust',\n  '05_Usage',\n  '06_Brand_Promise'\n];\n\nconst images = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  const imageName = imageNames[i] || `Image_${i + 1}`;\n  \n  // The Convert to File node puts base64 in json.data\n  let base64Data = item.json?.data || item.json?.base64 || '';\n  let mimeType = item.json?.mimeType || 'image/png';\n  \n  if (base64Data) {\n    // Ensure proper data URL format\n    const dataUrl = base64Data.startsWith('data:') \n      ? base64Data \n      : `data:${mimeType};base64,${base64Data}`;\n    \n    images.push({\n      data: dataUrl,\n      name: imageName\n    });\n  } else {\n    images.push({\n      data: '',\n      name: imageName,\n      error: 'No base64 data found'\n    });\n  }\n}\n\nreturn [{ \n  json: { \n    success: images.filter(i => i.data).length > 0,\n    count: images.filter(i => i.data).length,\n    images: images \n  } \n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2128,
+                1600
+            ],
+            "id": "aa8255b5-6ff2-4733-a0e9-c84275d5ab58",
+            "name": "Collect All Images"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                2352,
+                1600
+            ],
+            "id": "4abc1a1a-788c-4622-907c-3086d2601443",
+            "name": "Respond to Webhook"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=You are a product data extraction expert. Extract structured product information from the following raw description.\n\nRaw Description:\n{{ $json.body.raw_description }}\n\n---\n\nRules:\n- Extract ONLY what is explicitly mentioned or clearly implied\n- Do NOT hallucinate or invent information\n- Rewrite extracted info into short, marketing-friendly phrases\n- If a field has no relevant data, use an empty string or empty array\n\nReturn a valid JSON object with this exact structure:\n{\n  \"brand_name\": \"string\",\n  \"product_name\": \"string\",\n  \"tagline\": \"string (short catchy phrase)\",\n  \"ingredients\": [\"ingredient1\", \"ingredient2\", ...],\n  \"benefits\": [\"benefit1\", \"benefit2\", ...],\n  \"usage\": [\"use case 1\", \"use case 2\", ...],\n  \"claims\": [\"claim1\", \"claim2\", ...],\n  \"trust_info\": [\"certification1\", \"certification2\", ...],\n  \"shelf_life\": \"string\",\n  \"origin\": \"string\"\n}\n\nRespond with ONLY the JSON object, no explanations.",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3.1,
+            "position": [
+                880,
+                1600
+            ],
+            "id": "23793da6-3581-4894-a2f0-8e3a63d6e723",
+            "name": "AI Agent"
+        },
+        {
+            "parameters": {
+                "numberInputs": 6
+            },
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3.2,
+            "position": [
+                1904,
+                1536
+            ],
+            "id": "e0fb7809-e553-4720-a9f8-b172a0457688",
+            "name": "Merge"
+        },
+        {
+            "parameters": {
+                "operation": "upload",
+                "bucketName": "amazon-image-data",
+                "fileName": "edited",
+                "binaryPropertyName": "edited",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.awsS3",
+            "typeVersion": 2,
+            "position": [
+                1664,
+                1120
+            ],
+            "id": "1ff72f8f-9b81-4972-9309-9c27e5eb530b",
+            "name": "Upload a file",
+            "credentials": {
+                "aws": {
+                    "id": "v0AEbE7vCufCABmR",
+                    "name": "AWS (IAM) account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Product Data": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Normalize Product Data": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Hero Image",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Generate Ingredients Image",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Generate Benefits Image",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Generate Trust Image",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Generate Usage Image",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Generate Brand Promise Image",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Hero Image": {
+            "main": [
+                [
+                    {
+                        "node": "Upload a file",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Ingredients Image": {
+            "main": [
+                []
+            ]
+        },
+        "Generate Benefits Image": {
+            "main": [
+                []
+            ]
+        },
+        "Generate Trust Image": {
+            "main": [
+                []
+            ]
+        },
+        "Generate Usage Image": {
+            "main": [
+                []
+            ]
+        },
+        "Generate Brand Promise Image": {
+            "main": [
+                []
+            ]
+        },
+        "Collect All Images": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Product Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Merge": {
+            "main": [
+                [
+                    {
+                        "node": "Collect All Images",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {
+        "Webhook Trigger": [
+            {
+                "headers": {
+                    "host": "3.109.141.137:5678",
+                    "connection": "keep-alive",
+                    "content-type": "multipart/form-data; boundary=----formdata-undici-009837478536",
+                    "accept": "*/*",
+                    "accept-language": "*",
+                    "sec-fetch-mode": "cors",
+                    "user-agent": "node",
+                    "accept-encoding": "gzip, deflate",
+                    "content-length": "492449"
+                },
+                "params": {},
+                "query": {},
+                "body": {
+                    "raw_description": "JoySpoon Aam Papad\r\n\r\nRelive your sweetest childhood memories with JoySpoon's Aam Papad. Made from sun-kissed, real mango pulp, this treat is a tangy-sweet delight that captures the essence of traditional Indian summers. Whether you need a post-meal palate cleanser or a burst of flavor during your day, remember that the day deserves little bits of joy!\r\n\r\nKey Benefits:\r\nReal Mango Goodness: Made with 75% real mango pulp for an authentic taste.\r\nNutrient Rich: Contains significant amounts of Vitamin C (20.2%) and Iron (30.4%).\r\nGuilt-Free Snacking: 0% Total Fat and Gluten-Free.\r\nPure Nostalgia: Delivers the perfect balance of tangy and sweet flavors.\r\nNo Nasties: Free from artificial colors and \"supari\" (betel nut).\r\nIngredients Mango Pulp (75%), Sugar, Acidity Regulator (INS - 330), Pectin (INS- 440), Potassium Metabisulphite (INS- 224), Natural food colour. Contains added flavour - natural flavouring substances (mint).\r\n\r\nUsage Info\r\nA delightful post-meal digestive or palate cleanser\r\nThe perfect travel companion to beat motion sickness\r\nA nostalgic treat to share with family and friends\r\nInstant mood lifter when you need a tangy kick\r\nAdditional Information\r\nCrafted with high-quality ingredients\r\nSun-kissed preparation method\r\nThis product may contain nuts, peanuts, or sesame seeds.\r\nFSSAI: 10723999000030\r\nOrigin: India\r\nBest before: Refer to pack for details",
+                    "extra_prompt": ""
+                },
+                "webhookUrl": "http://3.109.141.137:5678/webhook/amazon-pdp",
+                "executionMode": "production"
+            }
+        ]
+    },
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "dd0b51edfb77c56ee9699a1415acf0bbcc2dcea8e82051b9ba489f8f7b5f4937"
+    }
+}
