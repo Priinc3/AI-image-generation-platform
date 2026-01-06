@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ImageUploader from '@/components/ImageUploader';
@@ -20,7 +20,8 @@ const IMAGE_SIZES = [
     { id: 'custom', label: 'Custom', width: 1024, height: 1024 },
 ];
 
-export default function SingleImagePage() {
+// Inner component that uses useSearchParams
+function SingleImageContent() {
     const searchParams = useSearchParams();
     const [referenceImage, setReferenceImage] = useState(null);
     const [referencePreview, setReferencePreview] = useState(null);
@@ -40,7 +41,7 @@ export default function SingleImagePage() {
 
     // Check for edit mode - load image from localStorage
     useEffect(() => {
-        const isEdit = searchParams.get('edit') === 'true';
+        const isEdit = searchParams?.get('edit') === 'true';
         if (isEdit) {
             const savedUrl = localStorage.getItem('editImageUrl');
             const savedName = localStorage.getItem('editImageName');
@@ -494,5 +495,18 @@ export default function SingleImagePage() {
                 />
             )}
         </>
+    );
+}
+
+// Wrapper component with Suspense for useSearchParams
+export default function SingleImagePage() {
+    return (
+        <Suspense fallback={
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div className="spinner"></div>
+            </div>
+        }>
+            <SingleImageContent />
+        </Suspense>
     );
 }
