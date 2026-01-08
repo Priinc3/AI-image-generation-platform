@@ -13,7 +13,6 @@ export default function Navbar() {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
-        // Fetch credits from localStorage or API
         const storedCredits = localStorage.getItem('usedCredits');
         const used = storedCredits ? parseFloat(storedCredits) : 0;
         setCredits({
@@ -35,7 +34,6 @@ export default function Navbar() {
         }
     };
 
-    // Get user display name (email without @domain)
     const getUserDisplayName = () => {
         if (!user?.email) return '';
         return user.email.split('@')[0];
@@ -45,7 +43,7 @@ export default function Navbar() {
         <nav className="navbar">
             <div className="navbar-container">
                 <Link href="/" className="navbar-logo">
-                    <div className="navbar-logo-icon">✨</div>
+                    <span style={{ fontSize: '1.25rem' }}>✨</span>
                     <span>ImageGen AI</span>
                 </Link>
 
@@ -78,54 +76,25 @@ export default function Navbar() {
                         href="/settings"
                         className={`navbar-link ${pathname === '/settings' ? 'active' : ''}`}
                     >
-                        ⚙️ Settings
+                        Settings
                     </Link>
 
                     {credits && (
                         <div className="credits-badge">
-                            <span>💳</span>
                             <span className="credits-amount">${credits.remaining.toFixed(2)}</span>
-                            <span style={{ color: 'var(--text-muted)' }}>/ $300</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>/ $300</span>
                         </div>
                     )}
 
-                    {/* User section */}
                     {user && (
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginLeft: '8px',
-                            paddingLeft: '16px',
-                            borderLeft: '1px solid var(--border-color)',
-                        }}>
-                            <span style={{
-                                fontSize: '0.85rem',
-                                color: 'var(--text-secondary)',
-                            }}>
-                                👤 {getUserDisplayName()}
+                        <div className="user-section">
+                            <span className="user-name">
+                                {getUserDisplayName()}
                             </span>
                             <button
                                 onClick={handleLogout}
                                 disabled={isLoggingOut}
-                                style={{
-                                    padding: '6px 12px',
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    color: 'var(--text-secondary)',
-                                    fontSize: '0.85rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.target.style.background = 'var(--bg-card)';
-                                    e.target.style.color = 'var(--text-primary)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.target.style.background = 'var(--bg-secondary)';
-                                    e.target.style.color = 'var(--text-secondary)';
-                                }}
+                                className="logout-btn"
                             >
                                 {isLoggingOut ? '...' : 'Logout'}
                             </button>
@@ -136,4 +105,5 @@ export default function Navbar() {
         </nav>
     );
 }
+
 
