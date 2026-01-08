@@ -34,6 +34,53 @@ function ImageEditorContent() {
     const [lightboxIndex, setLightboxIndex] = useState(-1);
     const [lastRequest, setLastRequest] = useState(null);
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Progress bar animation during generation
+    useEffect(() => {
+        let progressInterval;
+        let timeInterval;
+
+        if (isGenerating) {
+            setProgress(0);
+            setElapsedTime(0);
+
+            // Animate progress over 90 seconds, but slow down as it approaches 95%
+            progressInterval = setInterval(() => {
+                setProgress(prev => {
+                    if (prev >= 95) return 95; // Cap at 95% until actually complete
+                    // Slow down as we approach the end
+                    const remaining = 95 - prev;
+                    const increment = Math.max(0.3, remaining / 30);
+                    return Math.min(95, prev + increment);
+                });
+            }, 1000);
+
+            // Track elapsed time
+            timeInterval = setInterval(() => {
+                setElapsedTime(prev => prev + 1);
+            }, 1000);
+        } else {
+            // Complete the progress bar when done
+            if (progress > 0 && progress < 100) {
+                setProgress(100);
+                setTimeout(() => setProgress(0), 500);
+            }
+        }
+
+        return () => {
+            clearInterval(progressInterval);
+            clearInterval(timeInterval);
+        };
+    }, [isGenerating]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
 
     useEffect(() => {
         const isEdit = searchParams?.get('edit') === 'true';
@@ -156,31 +203,39 @@ function ImageEditorContent() {
             <Navbar />
             <main className="page-wrapper">
                 <div className="container" style={{ maxWidth: '1100px' }}>
-                    <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-xl)' }}>
-                        <h1 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px' }}>
-                            🎨 Image Editor
+                    {/* Header with animation */}
+                    <div className="animate-fade-in" style={{ textAlign: 'center', marginBottom: 'var(--spacing-xl)' }}>
+                        <h1 style={{
+                            fontSize: '2rem',
+                            fontWeight: '700',
+                            marginBottom: '8px',
+                            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                        }}>
+                            Image Editor
                         </h1>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            Upload up to 3 reference images and create AI-generated variations
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                            Upload reference images and create AI-powered variations
                         </p>
                     </div>
 
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: 'var(--spacing-xl)',
-                    }}>
+                    <div className="generator-grid">
                         {/* Left: Form */}
-                        <div style={{
-                            background: 'var(--bg-card)',
-                            borderRadius: 'var(--radius-lg)',
-                            border: '1px solid var(--border-color)',
-                            padding: 'var(--spacing-xl)',
-                        }}>
+                        <div className="card animate-fade-in" style={{ animationDelay: '0.1s' }}>
                             {/* Reference Images */}
                             <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                                <label style={{ display: 'block', fontWeight: '600', marginBottom: '12px' }}>
-                                    📷 Reference Images * <span style={{ fontWeight: '400', color: 'var(--text-muted)' }}>({referenceImages.length}/{MAX_IMAGES})</span>
+                                <label className="form-label">
+                                    📷 Reference Images
+                                    <span style={{
+                                        fontWeight: '400',
+                                        color: 'var(--text-muted)',
+                                        marginLeft: '8px',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        ({referenceImages.length}/{MAX_IMAGES})
+                                    </span>
                                 </label>
 
                                 <div style={{
@@ -189,22 +244,42 @@ function ImageEditorContent() {
                                     flexWrap: 'wrap',
                                 }}>
                                     {referenceImages.map((img, index) => (
-                                        <div key={index} style={{
+                                        <div key={index} className="animate-fade-in" style={{
                                             position: 'relative',
                                             width: '100px',
                                             height: '100px',
                                             borderRadius: 'var(--radius-md)',
                                             overflow: 'hidden',
                                             border: '2px solid var(--accent-primary)',
+                                            boxShadow: 'var(--shadow-md)',
+                                            transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)',
                                         }}>
-                                            <img src={img.preview || img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <img src={img.preview || img.url} alt="" style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                transition: 'transform var(--transition-normal)',
+                                            }} />
                                             <button onClick={() => removeImage(index)} style={{
-                                                position: 'absolute', top: '4px', right: '4px',
-                                                background: 'rgba(0,0,0,0.7)', color: 'white',
-                                                border: 'none', borderRadius: '50%',
-                                                width: '22px', height: '22px', cursor: 'pointer',
+                                                position: 'absolute',
+                                                top: '4px',
+                                                right: '4px',
+                                                background: 'rgba(0,0,0,0.7)',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '50%',
+                                                width: '24px',
+                                                height: '24px',
+                                                cursor: 'pointer',
                                                 fontSize: '12px',
-                                            }}>✕</button>
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all var(--transition-fast)',
+                                            }}
+                                                onMouseOver={(e) => e.target.style.background = 'var(--error)'}
+                                                onMouseOut={(e) => e.target.style.background = 'rgba(0,0,0,0.7)'}
+                                            >✕</button>
                                         </div>
                                     ))}
 
@@ -212,16 +287,29 @@ function ImageEditorContent() {
                                         <div
                                             onClick={() => document.getElementById('file-input').click()}
                                             style={{
-                                                width: '100px', height: '100px',
+                                                width: '100px',
+                                                height: '100px',
                                                 border: '2px dashed var(--border-color)',
                                                 borderRadius: 'var(--radius-md)',
-                                                display: 'flex', flexDirection: 'column',
-                                                alignItems: 'center', justifyContent: 'center',
-                                                cursor: 'pointer', background: 'var(--bg-secondary)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                background: 'var(--bg-secondary)',
+                                                transition: 'all var(--transition-fast)',
+                                            }}
+                                            onMouseOver={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                                                e.currentTarget.style.background = 'var(--accent-light)';
+                                            }}
+                                            onMouseOut={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--border-color)';
+                                                e.currentTarget.style.background = 'var(--bg-secondary)';
                                             }}
                                         >
-                                            <span style={{ fontSize: '1.5rem' }}>+</span>
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Add</span>
+                                            <span style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>+</span>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Add Image</span>
                                         </div>
                                     )}
                                 </div>
@@ -242,33 +330,41 @@ function ImageEditorContent() {
 
                             {/* Prompt */}
                             <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>
-                                    ✍️ Prompt *
-                                </label>
+                                <label className="form-label">✍️ Prompt</label>
                                 <textarea
+                                    className="form-textarea"
                                     placeholder="Describe the image you want to create..."
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
                                     rows={3}
-                                    style={{
-                                        width: '100%', padding: '12px',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: 'var(--radius-md)',
-                                        resize: 'vertical', fontSize: '0.95rem',
-                                    }}
                                 />
+                            </div>
+
+                            {/* Aspect Ratio - OUTSIDE Advanced Options */}
+                            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                                <label className="form-label">📐 Aspect Ratio</label>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {IMAGE_SIZES.map(size => (
+                                        <button
+                                            key={size.id}
+                                            type="button"
+                                            onClick={() => setSelectedSize(size.id)}
+                                            className={`size-btn ${selectedSize === size.id ? 'active' : ''}`}
+                                        >
+                                            {size.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Style Preset */}
                             <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>
-                                    🎨 Style
-                                </label>
+                                <label className="form-label">🎨 Style</label>
                                 <StylePresets
                                     selected={selectedPreset}
                                     onSelect={setSelectedPreset}
-                                    customValue={customStyle}
-                                    onCustomChange={setCustomStyle}
+                                    customStyle={customStyle}
+                                    onCustomStyleChange={setCustomStyle}
                                 />
                             </div>
 
@@ -278,74 +374,75 @@ function ImageEditorContent() {
                                     type="button"
                                     onClick={() => setShowAdvanced(!showAdvanced)}
                                     style={{
-                                        background: 'none', border: 'none',
-                                        color: 'var(--accent-primary)', cursor: 'pointer',
-                                        fontSize: '0.9rem', padding: 0,
-                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--accent-primary)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        padding: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        fontWeight: '500',
                                     }}
                                 >
-                                    <span style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                                    <span style={{
+                                        transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.3s ease',
+                                        display: 'inline-block',
+                                    }}>▶</span>
                                     Advanced Options
                                 </button>
 
-                                {showAdvanced && (
+                                <div style={{
+                                    maxHeight: showAdvanced ? '200px' : '0',
+                                    overflow: 'hidden',
+                                    transition: 'max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease',
+                                    opacity: showAdvanced ? 1 : 0,
+                                    marginTop: showAdvanced ? '12px' : '0',
+                                }}>
                                     <div style={{
-                                        marginTop: '12px', padding: '16px',
+                                        padding: '16px',
                                         background: 'var(--bg-secondary)',
                                         borderRadius: 'var(--radius-md)',
+                                        border: '1px solid var(--border-color)',
                                     }}>
-                                        {/* Image Size */}
-                                        <div style={{ marginBottom: '16px' }}>
-                                            <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px', fontSize: '0.9rem' }}>
-                                                📐 Aspect Ratio
-                                            </label>
-                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                                {IMAGE_SIZES.map(size => (
-                                                    <button
-                                                        key={size.id}
-                                                        type="button"
-                                                        onClick={() => setSelectedSize(size.id)}
-                                                        style={{
-                                                            padding: '8px 16px',
-                                                            border: selectedSize === size.id ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                                                            borderRadius: 'var(--radius-sm)',
-                                                            background: selectedSize === size.id ? 'var(--accent-primary)' : 'var(--bg-card)',
-                                                            color: selectedSize === size.id ? 'white' : 'var(--text-primary)',
-                                                            cursor: 'pointer', fontSize: '0.85rem',
-                                                        }}
-                                                    >
-                                                        {size.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
                                         {/* Creativity */}
                                         <div>
-                                            <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px', fontSize: '0.9rem' }}>
-                                                🎭 Creativity: {creativity}%
+                                            <label style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                fontWeight: '500',
+                                                marginBottom: '12px',
+                                                fontSize: '0.9rem',
+                                                color: 'var(--text-primary)',
+                                            }}>
+                                                <span>🎭 Creativity</span>
+                                                <span style={{
+                                                    color: 'var(--accent-primary)',
+                                                    fontWeight: '600',
+                                                }}>{creativity}%</span>
                                             </label>
                                             <input
-                                                type="range" min="10" max="100" step="5"
+                                                type="range"
+                                                min="10"
+                                                max="100"
+                                                step="5"
                                                 value={creativity}
                                                 onChange={(e) => setCreativity(parseInt(e.target.value))}
-                                                style={{ width: '100%' }}
+                                                className="creativity-slider"
                                             />
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            <div className="slider-labels">
                                                 <span>Faithful</span>
                                                 <span>Creative</span>
                                             </div>
                                         </div>
                                     </div>
-                                )}
+                                </div>
                             </div>
 
                             {error && (
-                                <div style={{
-                                    background: '#FEE2E2', color: '#DC2626',
-                                    padding: '12px', borderRadius: 'var(--radius-md)',
-                                    marginBottom: '16px', fontSize: '0.9rem',
-                                }}>
+                                <div className="error-message animate-fade-in">
                                     ⚠️ {error}
                                 </div>
                             )}
@@ -353,70 +450,181 @@ function ImageEditorContent() {
                             <button
                                 onClick={() => handleGenerate()}
                                 disabled={isGenerating || referenceImages.length === 0}
+                                className="btn btn-primary btn-lg"
                                 style={{
-                                    width: '100%', padding: '14px',
-                                    background: referenceImages.length === 0 ? 'var(--text-muted)' : 'var(--accent-primary)',
-                                    color: 'white', border: 'none',
-                                    borderRadius: 'var(--radius-md)',
-                                    fontSize: '1rem', fontWeight: '600',
-                                    cursor: referenceImages.length === 0 ? 'not-allowed' : 'pointer',
+                                    width: '100%',
                                     opacity: isGenerating ? 0.7 : 1,
+                                    cursor: referenceImages.length === 0 ? 'not-allowed' : 'pointer',
                                 }}
                             >
-                                {isGenerating ? '⏳ Generating...' : `✨ Generate (${referenceImages.length} image${referenceImages.length !== 1 ? 's' : ''})`}
+                                {isGenerating ? (
+                                    <>
+                                        <span className="spinner"></span>
+                                        Generating...
+                                    </>
+                                ) : (
+                                    `✨ Generate (${referenceImages.length} image${referenceImages.length !== 1 ? 's' : ''})`
+                                )}
                             </button>
                         </div>
 
                         {/* Right: Results */}
-                        <div style={{
-                            background: 'var(--bg-card)',
-                            borderRadius: 'var(--radius-lg)',
-                            border: '1px solid var(--border-color)',
-                            padding: 'var(--spacing-xl)',
-                            minHeight: '400px',
-                        }}>
-                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Generated Images</h3>
+                        <div className="card animate-fade-in" style={{ animationDelay: '0.2s', minHeight: '400px' }}>
+                            <h3 style={{
+                                marginBottom: '16px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                            }}>
+                                <span>🖼️</span>
+                                Generated Images
+                            </h3>
 
                             {isGenerating ? (
-                                <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                                    <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-                                    <p>Generating your images...</p>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This may take 30-60 seconds</p>
+                                <div style={{
+                                    padding: '40px 24px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minHeight: '300px',
+                                }}>
+                                    {/* Progress Circle */}
+                                    <div style={{
+                                        position: 'relative',
+                                        width: '120px',
+                                        height: '120px',
+                                        marginBottom: '24px',
+                                    }}>
+                                        <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+                                            {/* Background circle */}
+                                            <circle
+                                                cx="60"
+                                                cy="60"
+                                                r="52"
+                                                fill="none"
+                                                stroke="var(--border-color)"
+                                                strokeWidth="8"
+                                            />
+                                            {/* Progress circle */}
+                                            <circle
+                                                cx="60"
+                                                cy="60"
+                                                r="52"
+                                                fill="none"
+                                                stroke="var(--accent-primary)"
+                                                strokeWidth="8"
+                                                strokeLinecap="round"
+                                                strokeDasharray={`${2 * Math.PI * 52}`}
+                                                strokeDashoffset={`${2 * Math.PI * 52 * (1 - progress / 100)}`}
+                                                style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                                            />
+                                        </svg>
+                                        {/* Percentage text */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '50%',
+                                            left: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            textAlign: 'center',
+                                        }}>
+                                            <div style={{
+                                                fontSize: '1.75rem',
+                                                fontWeight: '700',
+                                                color: 'var(--accent-primary)',
+                                            }}>
+                                                {Math.round(progress)}%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Bar */}
+                                    <div style={{
+                                        width: '100%',
+                                        maxWidth: '280px',
+                                        marginBottom: '16px',
+                                    }}>
+                                        <div style={{
+                                            width: '100%',
+                                            height: '6px',
+                                            background: 'var(--border-color)',
+                                            borderRadius: 'var(--radius-full)',
+                                            overflow: 'hidden',
+                                        }}>
+                                            <div style={{
+                                                width: `${progress}%`,
+                                                height: '100%',
+                                                background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))',
+                                                borderRadius: 'var(--radius-full)',
+                                                transition: 'width 0.5s ease',
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    <p style={{
+                                        fontWeight: '600',
+                                        marginBottom: '4px',
+                                        fontSize: '1rem',
+                                    }}>
+                                        ✨ Generating your images...
+                                    </p>
+                                    <p style={{
+                                        fontSize: '0.85rem',
+                                        color: 'var(--text-muted)',
+                                        marginBottom: '8px',
+                                    }}>
+                                        Time elapsed: {formatTime(elapsedTime)}
+                                    </p>
+                                    <p style={{
+                                        fontSize: '0.75rem',
+                                        color: 'var(--text-muted)',
+                                        opacity: 0.7,
+                                    }}>
+                                        Usually takes 30-90 seconds
+                                    </p>
                                 </div>
+
                             ) : generatedImages.length > 0 ? (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                     {generatedImages.map((img, index) => (
-                                        <div key={img.key || index} style={{
-                                            borderRadius: 'var(--radius-md)',
-                                            overflow: 'hidden',
-                                            border: '1px solid var(--border-color)',
-                                        }}>
+                                        <div key={img.key || index} className="gallery-item animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                                             <img
                                                 src={img.url}
                                                 alt=""
                                                 onClick={() => setLightboxIndex(index)}
                                                 style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', cursor: 'pointer' }}
                                             />
-                                            <div style={{ padding: '8px', display: 'flex', justifyContent: 'center' }}>
+                                            <div className="gallery-overlay">
+                                                <span className="gallery-label">Image {index + 1}</span>
                                                 <button
                                                     onClick={() => downloadImage(img, img.name || `image_${index + 1}.png`)}
-                                                    style={{
-                                                        padding: '6px 16px', fontSize: '0.85rem',
-                                                        background: 'var(--accent-primary)', color: 'white',
-                                                        border: 'none', borderRadius: 'var(--radius-sm)',
-                                                        cursor: 'pointer',
-                                                    }}
+                                                    className="gallery-download"
                                                 >
-                                                    ↓ Download
+                                                    ↓
                                                 </button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-                                    <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🖼️</div>
-                                    <p>Your generated images will appear here</p>
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '60px 20px',
+                                    color: 'var(--text-muted)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minHeight: '300px',
+                                }}>
+                                    <div style={{
+                                        fontSize: '4rem',
+                                        marginBottom: '16px',
+                                        opacity: '0.5',
+                                    }}>🖼️</div>
+                                    <p style={{ fontSize: '1rem' }}>Your generated images will appear here</p>
+                                    <p style={{ fontSize: '0.85rem', marginTop: '8px' }}>Upload images and click Generate to start</p>
                                 </div>
                             )}
 
@@ -425,11 +633,7 @@ function ImageEditorContent() {
                                     <button
                                         onClick={() => handleGenerate(true)}
                                         disabled={isGenerating}
-                                        style={{
-                                            padding: '10px 20px', background: 'var(--bg-secondary)',
-                                            border: '1px solid var(--border-color)',
-                                            borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                                        }}
+                                        className="btn btn-secondary"
                                     >
                                         🔄 Generate Again
                                     </button>
@@ -454,7 +658,17 @@ function ImageEditorContent() {
 
 export default function ImageEditorPage() {
     return (
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><div className="spinner"></div></div>}>
+        <Suspense fallback={
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+                background: 'var(--bg-secondary)',
+            }}>
+                <div className="preview-spinner"></div>
+            </div>
+        }>
             <ImageEditorContent />
         </Suspense>
     );

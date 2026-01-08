@@ -1,15 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/context/AuthContext';
 import {
     getAWSSettings,
     saveAWSSettings,
     getWebhookSettings,
-    saveWebhookSettings
+    saveWebhookSettings,
+    saveSettingsToSupabase,
+    syncSettingsFromCloud,
 } from '@/utils/settingsStorage';
 
 export default function SettingsPage() {
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
     const [awsSettings, setAwsSettings] = useState({
         accessKeyId: '',
         secretAccessKey: '',
@@ -24,41 +31,115 @@ export default function SettingsPage() {
 
     const [saved, setSaved] = useState(false);
     const [showSecrets, setShowSecrets] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
 
+    // Redirect if not logged in
     useEffect(() => {
-        // Load saved settings
-        const aws = getAWSSettings();
-        const webhooks = getWebhookSettings();
+        if (!authLoading && !user) {
+            router.push('/auth');
+        }
+    }, [user, authLoading, router]);
 
-        if (aws.accessKeyId) setAwsSettings(aws);
-        if (webhooks.pdpWebhookUrl) setWebhookSettings(webhooks);
-    }, []);
+    // Load settings from cloud
+    useEffect(() => {
+        const loadSettings = async () => {
+            if (!user) return;
 
-    const handleSaveAWS = () => {
-        saveAWSSettings(awsSettings);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+            setIsLoading(true);
+            try {
+                // Try to sync from cloud first
+                const cloudSettings = await syncSettingsFromCloud(user.id);
+
+                if (cloudSettings) {
+                    setAwsSettings({
+                        accessKeyId: cloudSettings.aws_access_key_id || '',
+                        secretAccessKey: cloudSettings.aws_secret_access_key || '',
+                        region: cloudSettings.aws_region || 'ap-south-1',
+                        bucket: cloudSettings.aws_bucket || 'amazon-image-data',
+                    });
+                    setWebhookSettings({
+                        pdpWebhookUrl: cloudSettings.n8n_pdp_webhook_url || '',
+                        singleWebhookUrl: cloudSettings.n8n_single_webhook_url || '',
+                    });
+                } else {
+                    // Fall back to localStorage
+                    const aws = getAWSSettings();
+                    const webhooks = getWebhookSettings();
+                    if (aws.accessKeyId) setAwsSettings(aws);
+                    if (webhooks.pdpWebhookUrl) setWebhookSettings(webhooks);
+                }
+            } catch (e) {
+                console.error('Error loading settings:', e);
+                // Fall back to localStorage
+                const aws = getAWSSettings();
+                const webhooks = getWebhookSettings();
+                if (aws.accessKeyId) setAwsSettings(aws);
+                if (webhooks.pdpWebhookUrl) setWebhookSettings(webhooks);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadSettings();
+    }, [user]);
+
+    const handleSaveAll = async () => {
+        if (!user) return;
+
+        setIsSaving(true);
+        setError('');
+
+        try {
+            // Save to localStorage first (immediate feedback)
+            saveAWSSettings(awsSettings);
+            saveWebhookSettings(webhookSettings);
+
+            // Save to Supabase
+            await saveSettingsToSupabase(user.id, awsSettings, webhookSettings);
+
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (e) {
+            console.error('Error saving settings:', e);
+            setError('Failed to save to cloud. Settings saved locally.');
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleSaveWebhooks = () => {
-        saveWebhookSettings(webhookSettings);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-    };
+    // Loading states
+    if (authLoading || isLoading) {
+        return (
+            <>
+                <Navbar />
+                <main className="page-wrapper">
+                    <div className="container">
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '60vh',
+                        }}>
+                            <div className="preview-spinner"></div>
+                        </div>
+                    </div>
+                </main>
+            </>
+        );
+    }
 
-    const handleSaveAll = () => {
-        saveAWSSettings(awsSettings);
-        saveWebhookSettings(webhookSettings);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-    };
+    if (!user) return null;
 
     return (
         <>
             <Navbar />
             <main className="page-wrapper">
                 <div className="container">
-                    <div className="settings-page">
+                    <div className="settings-page animate-fade-in">
                         {/* Header */}
                         <div className="section-header">
                             <h1 className="section-title">Settings</h1>
@@ -69,15 +150,25 @@ export default function SettingsPage() {
 
                         {/* Success Message */}
                         {saved && (
-                            <div className="success-message">
+                            <div className="success-message animate-fade-in">
                                 ✓ Settings saved successfully!
                             </div>
                         )}
 
-                        {/* Warning */}
-                        <div className="settings-warning">
-                            ⚠️ <strong>Security Note:</strong> Settings are stored in your browser's localStorage.
-                            Do not use this on shared computers. For production, use environment variables instead.
+                        {/* Error Message */}
+                        {error && (
+                            <div className="error-message animate-fade-in">
+                                ⚠️ {error}
+                            </div>
+                        )}
+
+                        {/* Cloud Sync Info */}
+                        <div className="settings-warning" style={{
+                            background: 'rgba(79, 70, 229, 0.1)',
+                            borderColor: 'var(--accent-primary)',
+                        }}>
+                            ☁️ <strong>Cloud Sync:</strong> Your settings are synced to your account.
+                            They'll be available on any device where you sign in.
                         </div>
 
                         {/* AWS Settings */}
@@ -160,13 +251,6 @@ export default function SettingsPage() {
                                         />
                                     </div>
                                 </div>
-
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={handleSaveAWS}
-                                >
-                                    💾 Save AWS Settings
-                                </button>
                             </div>
                         </div>
 
@@ -207,13 +291,6 @@ export default function SettingsPage() {
                                         })}
                                     />
                                 </div>
-
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={handleSaveWebhooks}
-                                >
-                                    💾 Save Webhook Settings
-                                </button>
                             </div>
                         </div>
 
@@ -222,8 +299,17 @@ export default function SettingsPage() {
                             <button
                                 className="btn btn-primary btn-lg"
                                 onClick={handleSaveAll}
+                                disabled={isSaving}
+                                style={{ minWidth: '200px' }}
                             >
-                                💾 Save All Settings
+                                {isSaving ? (
+                                    <>
+                                        <span className="spinner"></span>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    '💾 Save All Settings'
+                                )}
                             </button>
                         </div>
                     </div>
@@ -232,3 +318,4 @@ export default function SettingsPage() {
         </>
     );
 }
+

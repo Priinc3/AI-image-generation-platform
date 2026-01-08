@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
     const pathname = usePathname();
+    const router = useRouter();
+    const { user, signOut } = useAuth();
     const [credits, setCredits] = useState(null);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
         // Fetch credits from localStorage or API
@@ -18,6 +22,24 @@ export default function Navbar() {
             remaining: 300 - used
         });
     }, []);
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            await signOut();
+            router.push('/auth');
+        } catch (error) {
+            console.error('Error signing out:', error);
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
+
+    // Get user display name (email without @domain)
+    const getUserDisplayName = () => {
+        if (!user?.email) return '';
+        return user.email.split('@')[0];
+    };
 
     return (
         <nav className="navbar">
@@ -66,8 +88,52 @@ export default function Navbar() {
                             <span style={{ color: 'var(--text-muted)' }}>/ $300</span>
                         </div>
                     )}
+
+                    {/* User section */}
+                    {user && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginLeft: '8px',
+                            paddingLeft: '16px',
+                            borderLeft: '1px solid var(--border-color)',
+                        }}>
+                            <span style={{
+                                fontSize: '0.85rem',
+                                color: 'var(--text-secondary)',
+                            }}>
+                                👤 {getUserDisplayName()}
+                            </span>
+                            <button
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
+                                style={{
+                                    padding: '6px 12px',
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.background = 'var(--bg-card)';
+                                    e.target.style.color = 'var(--text-primary)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.background = 'var(--bg-secondary)';
+                                    e.target.style.color = 'var(--text-secondary)';
+                                }}
+                            >
+                                {isLoggingOut ? '...' : 'Logout'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </nav>
     );
 }
+

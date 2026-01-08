@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/context/AuthContext';
 
 const FEATURES = [
   {
@@ -60,6 +63,35 @@ const STEPS = [
 ];
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth');
+    }
+  }, [user, loading, router]);
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: 'var(--bg-secondary)',
+      }}>
+        <div className="preview-spinner"></div>
+      </div>
+    );
+  }
+
+  // Don't render content if not authenticated
+  if (!user) {
+    return null;
+  }
+
   return (
     <>
       <Navbar />

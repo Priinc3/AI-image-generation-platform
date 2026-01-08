@@ -47,18 +47,30 @@ export const STYLE_PRESETS = [
     }
 ];
 
-export default function StylePresets({ selected, onSelect, customStyle, onCustomStyleChange }) {
+export default function StylePresets({
+    selected,
+    onSelect,
+    customStyle,
+    customValue, // backward compatibility
+    onCustomStyleChange,
+    onCustomChange // backward compatibility
+}) {
     const isCustom = selected === 'custom';
+    const currentCustomValue = customStyle || customValue || '';
+    const handleCustomChange = onCustomStyleChange || onCustomChange;
 
     return (
         <div className="style-presets">
             <div className="presets-grid">
-                {STYLE_PRESETS.map((preset) => (
+                {STYLE_PRESETS.map((preset, index) => (
                     <button
                         key={preset.id}
                         type="button"
                         className={`preset-card ${selected === preset.id ? 'selected' : ''}`}
                         onClick={() => onSelect(preset.id)}
+                        style={{
+                            animationDelay: `${index * 0.05}s`,
+                        }}
                     >
                         <div className="preset-name">{preset.name}</div>
                         <div className="preset-description">{preset.description}</div>
@@ -68,12 +80,12 @@ export default function StylePresets({ selected, onSelect, customStyle, onCustom
 
             {/* Custom Style Input */}
             {isCustom && (
-                <div className="custom-style-input" style={{ marginTop: 'var(--spacing-md)' }}>
+                <div className="custom-style-input animate-fade-in" style={{ marginTop: 'var(--spacing-md)' }}>
                     <textarea
                         className="form-textarea"
                         placeholder="Describe your custom style... e.g., 'Vintage polaroid look, soft focus, nostalgic colors'"
-                        value={customStyle || ''}
-                        onChange={(e) => onCustomStyleChange && onCustomStyleChange(e.target.value)}
+                        value={currentCustomValue}
+                        onChange={(e) => handleCustomChange && handleCustomChange(e.target.value)}
                         rows={2}
                     />
                 </div>
