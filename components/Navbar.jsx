@@ -44,7 +44,7 @@ export default function Navbar() {
                         href="/single-image"
                         className={`navbar-link ${pathname === '/single-image' ? 'active' : ''}`}
                     >
-                        Single Image
+                        Image Editor
                     </Link>
                     <Link
                         href="/gallery"

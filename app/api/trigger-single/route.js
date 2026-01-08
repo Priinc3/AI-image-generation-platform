@@ -4,8 +4,6 @@ export async function POST(request) {
     try {
         const formData = await request.formData();
         const prompt = formData.get('prompt');
-        const image = formData.get('image'); // Optional reference image (file)
-        const imageUrl = formData.get('imageUrl'); // Optional reference image URL (from edit mode)
         const stylePreset = formData.get('stylePreset') || 'ecommerce';
         const stylePromptSuffix = formData.get('stylePromptSuffix') || '';
         const width = formData.get('width') || '1024';
@@ -13,6 +11,22 @@ export async function POST(request) {
         const creativity = formData.get('creativity') || '0.7';
         const variations = formData.get('variations') || '2';
         const customWebhookUrl = formData.get('webhookUrl');
+        const imageCount = formData.get('imageCount') || '1';
+
+        // Get multiple images (image1, image2, image3) or URLs
+        const images = [];
+        const imageUrls = [];
+
+        for (let i = 1; i <= 3; i++) {
+            const image = formData.get(`image${i}`);
+            const imageUrl = formData.get(`imageUrl${i}`);
+
+            if (image && image.size > 0) {
+                images.push({ index: i, file: image });
+            } else if (imageUrl) {
+                imageUrls.push({ index: i, url: imageUrl });
+            }
+        }
 
         if (!prompt) {
             return NextResponse.json(
@@ -21,10 +35,19 @@ export async function POST(request) {
             );
         }
 
-        // Use custom webhook URL from request, or fall back to environment variable
+        if (images.length === 0 && imageUrls.length === 0) {
+            return NextResponse.json(
+                { error: 'At least one reference image is required' },
+                { status: 400 }
+            );
+        }
+
         const webhookUrl = customWebhookUrl || process.env.N8N_SINGLE_WEBHOOK_URL;
 
-        console.log('Single Image Webhook URL:', webhookUrl);
+        console.log('Image Editor Webhook URL:', webhookUrl);
+        console.log('Image count:', imageCount);
+        console.log('File images:', images.length);
+        console.log('URL images:', imageUrls.length);
 
         if (!webhookUrl) {
             console.error('No webhook URL provided');
@@ -34,7 +57,6 @@ export async function POST(request) {
             );
         }
 
-        // Create FormData to send to n8n
         const n8nFormData = new FormData();
 
         // Build full prompt with style
@@ -51,39 +73,39 @@ export async function POST(request) {
         n8nFormData.append('height', height);
         n8nFormData.append('creativity', creativity);
         n8nFormData.append('variations', variations);
+        n8nFormData.append('image_count', imageCount);
 
-        // Add image as binary if provided (file upload)
-        if (image && image.size > 0) {
-            const imageBuffer = await image.arrayBuffer();
-            const imageBlob = new Blob([imageBuffer], { type: image.type || 'image/png' });
-            n8nFormData.append('image', imageBlob, image.name || 'reference_image.png');
-            console.log('Reference image from file:', imageBuffer.byteLength, 'bytes');
-        } else if (imageUrl) {
-            // Fetch the image from URL and send as binary (for edit mode)
-            console.log('Fetching image from URL:', imageUrl);
+        // Add file images
+        for (const img of images) {
+            const imageBuffer = await img.file.arrayBuffer();
+            const imageBlob = new Blob([imageBuffer], { type: img.file.type || 'image/png' });
+            n8nFormData.append(`image${img.index}`, imageBlob, img.file.name || `reference_image_${img.index}.png`);
+            console.log(`Image ${img.index} size:`, imageBuffer.byteLength, 'bytes');
+        }
+
+        // For URL images, fetch and send as binary
+        for (const img of imageUrls) {
+            console.log(`Fetching image ${img.index} from URL:`, img.url);
             try {
-                const imageResponse = await fetch(imageUrl);
+                const imageResponse = await fetch(img.url);
                 if (imageResponse.ok) {
                     const imageBuffer = await imageResponse.arrayBuffer();
                     const contentType = imageResponse.headers.get('content-type') || 'image/png';
                     const imageBlob = new Blob([imageBuffer], { type: contentType });
-                    n8nFormData.append('image', imageBlob, 'reference_image.png');
-                    console.log('Reference image from URL:', imageBuffer.byteLength, 'bytes');
+                    n8nFormData.append(`image${img.index}`, imageBlob, `reference_image_${img.index}.png`);
+                    console.log(`Image ${img.index} from URL size:`, imageBuffer.byteLength, 'bytes');
                 } else {
-                    console.warn('Failed to fetch image from URL:', imageResponse.status);
-                    // Still pass the URL as fallback
-                    n8nFormData.append('image_url', imageUrl);
+                    console.warn(`Failed to fetch image ${img.index} from URL:`, imageResponse.status);
+                    n8nFormData.append(`image_url${img.index}`, img.url);
                 }
             } catch (fetchError) {
-                console.error('Error fetching image from URL:', fetchError);
-                // Still pass the URL as fallback
-                n8nFormData.append('image_url', imageUrl);
+                console.error(`Error fetching image ${img.index} from URL:`, fetchError);
+                n8nFormData.append(`image_url${img.index}`, img.url);
             }
         }
 
         console.log('Sending to n8n:', webhookUrl);
 
-        // Trigger n8n workflow
         const n8nResponse = await fetch(webhookUrl, {
             method: 'POST',
             body: n8nFormData,
@@ -100,7 +122,6 @@ export async function POST(request) {
             );
         }
 
-        // Try to parse JSON response
         const responseText = await n8nResponse.text();
         console.log('n8n raw response:', responseText.substring(0, 500));
 
@@ -109,8 +130,6 @@ export async function POST(request) {
             result = JSON.parse(responseText);
         } catch (parseError) {
             console.error('Failed to parse n8n response as JSON:', parseError);
-            // If n8n returns empty or invalid JSON, return success anyway
-            // The frontend will fetch images from S3
             return NextResponse.json({
                 success: true,
                 message: 'Workflow triggered, check S3 for images',
@@ -120,8 +139,7 @@ export async function POST(request) {
 
         console.log('n8n success, parsed result');
 
-        // Normalize response - handle various n8n output formats
-        let images = [];
+        let resultImages = [];
 
         const extractS3Url = (item) => {
             return item.Location || item.url || item.s3Url || item.publicUrl || '';
@@ -132,36 +150,36 @@ export async function POST(request) {
         };
 
         if (Array.isArray(result)) {
-            images = result.map((item, idx) => ({
+            resultImages = result.map((item, idx) => ({
                 url: extractS3Url(item),
                 key: extractKey(item),
                 name: extractKey(item) || `variant_${idx + 1}.png`,
                 bucket: item.Bucket || item.bucket || 'amazon-image-data',
             })).filter(img => img.url);
         } else if (result.images && Array.isArray(result.images)) {
-            images = result.images.map((item, idx) => ({
+            resultImages = result.images.map((item, idx) => ({
                 url: extractS3Url(item) || item.url,
                 key: extractKey(item),
                 name: extractKey(item) || item.name || `variant_${idx + 1}.png`,
             })).filter(img => img.url);
         } else if (result.Location || result.url) {
-            images = [{
+            resultImages = [{
                 url: extractS3Url(result),
                 key: extractKey(result),
                 name: extractKey(result) || 'generated_image.png',
             }];
         } else if (result.success && result.count) {
             if (result.images) {
-                images = result.images;
+                resultImages = result.images;
             }
         }
 
-        console.log('Normalized images:', images.length);
+        console.log('Normalized images:', resultImages.length);
 
         return NextResponse.json({
             success: true,
-            count: images.length,
-            images: images,
+            count: resultImages.length,
+            images: resultImages,
         });
 
     } catch (error) {

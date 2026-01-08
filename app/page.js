@@ -22,18 +22,18 @@ const FEATURES = [
   },
   {
     icon: '🎨',
-    title: 'Single Image Generator',
-    description: 'Create stunning product images with custom prompts and style presets.',
+    title: 'Image Editor',
+    description: 'Create stunning product images with up to 3 reference images and custom prompts.',
     features: [
+      'Up to 3 reference images',
       '8 style presets',
       'Custom prompts',
-      'Reference image support',
       'Multiple variations',
       'Creativity control',
       'Instant download'
     ],
     link: '/single-image',
-    cta: 'Generate Single Image',
+    cta: 'Open Image Editor',
     accent: '#7C3AED'
   }
 ];
@@ -119,7 +119,7 @@ export default function HomePage() {
                 📦 Amazon PDP Generator
               </Link>
               <Link href="/single-image" className="btn btn-secondary btn-lg">
-                🎨 Single Image Generator
+                🎨 Image Editor
               </Link>
             </div>
           </div>

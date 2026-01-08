@@ -1,6 +1,53 @@
 {
-    "name": "Single Image Generator - Webhook (S3)",
     "nodes": [
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "={{ $json.body.raw_prompt }}\n\npreset : {{ $json.body.style_suffix }}\n\nwidth: {{ $json.body.width }}\nheight : {{ $json.body.height }}\n\ncreativity : {{ $('Webhook Trigger1').item.json.body.creativity }}",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                80,
+                944
+            ],
+            "id": "00a0bdf0-6985-409d-a00a-813b39b30572",
+            "name": "Generate Image",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Collect S3 URLs from all uploaded images\nconst items = $input.all();\n\nconst images = items.map((item, index) => ({\n    url: item.json.Location || '',\n    name: item.json.Key || `variant_${index + 1}`,\n})).filter(img => img.url);\n\nreturn [{ json: { success: true, count: images.length, images } }];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                816,
+                1024
+            ],
+            "id": "a8cd84ca-a98e-4850-8aa6-9a36b4e6e480",
+            "name": "Extract Image Data"
+        },
         {
             "parameters": {
                 "httpMethod": "POST",
@@ -11,150 +58,12 @@
             "type": "n8n-nodes-base.webhook",
             "typeVersion": 2,
             "position": [
-                0,
-                300
+                -240,
+                1008
             ],
-            "id": "webhook-trigger",
-            "name": "Webhook Trigger",
+            "id": "8d21a80a-c3cd-4e49-b8c4-6f3022f9a09d",
+            "name": "Webhook Trigger1",
             "webhookId": "single-image-webhook"
-        },
-        {
-            "parameters": {
-                "resource": "image",
-                "operation": "edit",
-                "modelId": {
-                    "__rl": true,
-                    "value": "models/gemini-3-pro-image-preview",
-                    "mode": "list"
-                },
-                "prompt": "={{ $json.body.prompt }}\n\ncreativity: {{ $json.body.creativity }}",
-                "images": {
-                    "values": [
-                        {
-                            "binaryPropertyName": "image"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "@n8n/n8n-nodes-langchain.googleGemini",
-            "typeVersion": 1,
-            "position": [
-                240,
-                200
-            ],
-            "id": "image-gen-1",
-            "name": "Generate Image 1",
-            "credentials": {
-                "googlePalmApi": {
-                    "id": "YOUR_CREDENTIAL_ID",
-                    "name": "Your Google Gemini API"
-                }
-            }
-        },
-        {
-            "parameters": {
-                "resource": "image",
-                "operation": "edit",
-                "modelId": {
-                    "__rl": true,
-                    "value": "models/gemini-3-pro-image-preview",
-                    "mode": "list"
-                },
-                "prompt": "={{ $json.body.prompt }}\n\ncreativity: {{ $json.body.creativity }}",
-                "images": {
-                    "values": [
-                        {
-                            "binaryPropertyName": "image"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "@n8n/n8n-nodes-langchain.googleGemini",
-            "typeVersion": 1,
-            "position": [
-                240,
-                400
-            ],
-            "id": "image-gen-2",
-            "name": "Generate Image 2",
-            "credentials": {
-                "googlePalmApi": {
-                    "id": "YOUR_CREDENTIAL_ID",
-                    "name": "Your Google Gemini API"
-                }
-            }
-        },
-        {
-            "parameters": {
-                "operation": "upload",
-                "bucketName": "amazon-image-data",
-                "fileName": "=Single_Variant1_{{ $now.format('yyyy-MM-dd_HH-mm-ss') }}_{{ $now.millisecond }}",
-                "binaryPropertyName": "edited",
-                "additionalFields": {}
-            },
-            "type": "n8n-nodes-base.awsS3",
-            "typeVersion": 2,
-            "position": [
-                480,
-                200
-            ],
-            "id": "upload-s3-1",
-            "name": "Upload to S3 - Variant 1",
-            "credentials": {
-                "aws": {
-                    "id": "YOUR_AWS_CREDENTIAL_ID",
-                    "name": "AWS (IAM) account"
-                }
-            }
-        },
-        {
-            "parameters": {
-                "operation": "upload",
-                "bucketName": "amazon-image-data",
-                "fileName": "=Single_Variant2_{{ $now.format('yyyy-MM-dd_HH-mm-ss') }}_{{ $now.millisecond }}",
-                "binaryPropertyName": "edited",
-                "additionalFields": {}
-            },
-            "type": "n8n-nodes-base.awsS3",
-            "typeVersion": 2,
-            "position": [
-                480,
-                400
-            ],
-            "id": "upload-s3-2",
-            "name": "Upload to S3 - Variant 2",
-            "credentials": {
-                "aws": {
-                    "id": "YOUR_AWS_CREDENTIAL_ID",
-                    "name": "AWS (IAM) account"
-                }
-            }
-        },
-        {
-            "parameters": {},
-            "type": "n8n-nodes-base.merge",
-            "typeVersion": 3.2,
-            "position": [
-                720,
-                300
-            ],
-            "id": "merge-images",
-            "name": "Merge All Uploads"
-        },
-        {
-            "parameters": {
-                "jsCode": "// Collect S3 URLs from all uploaded images\nconst items = $input.all();\n\nconst images = items.map((item, index) => {\n    return {\n        url: item.json.Location || '',\n        name: item.json.Key || `variant_${index + 1}`,\n        bucket: item.json.Bucket || 'amazon-image-data'\n    };\n}).filter(img => img.url);\n\nreturn [{ \n    json: { \n        success: images.length > 0,\n        count: images.length,\n        images: images \n    } \n}];"
-            },
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                960,
-                300
-            ],
-            "id": "collect-urls",
-            "name": "Collect S3 URLs"
         },
         {
             "parameters": {
@@ -165,90 +74,182 @@
             "type": "n8n-nodes-base.respondToWebhook",
             "typeVersion": 1.1,
             "position": [
-                1200,
-                300
+                1008,
+                1024
             ],
-            "id": "respond-webhook",
-            "name": "Respond to Webhook"
+            "id": "866cff2a-60df-4ecd-9c32-dfbb0dbfcba3",
+            "name": "Respond to Webhook1"
+        },
+        {
+            "parameters": {
+                "operation": "upload",
+                "bucketName": "amazon-image-data",
+                "fileName": "=EDITED_1_{{ $now.format('yyyy-MM-dd')}}_{{ $now.millisecond }}",
+                "binaryPropertyName": "edited",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.awsS3",
+            "typeVersion": 2,
+            "position": [
+                320,
+                944
+            ],
+            "id": "aea260fe-f4bb-4db6-b38e-da8403eac5ad",
+            "name": "Upload a file5",
+            "credentials": {
+                "aws": {
+                    "id": "v0AEbE7vCufCABmR",
+                    "name": "AWS (IAM) account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "upload",
+                "bucketName": "amazon-image-data",
+                "fileName": "=EDITED_2_{{ $now.format('yyyy-MM-dd')}}_{{ $now.millisecond }}",
+                "binaryPropertyName": "edited",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.awsS3",
+            "typeVersion": 2,
+            "position": [
+                320,
+                1088
+            ],
+            "id": "0f309928-bc06-4523-90d7-1f3b3f41d500",
+            "name": "Upload a file",
+            "credentials": {
+                "aws": {
+                    "id": "v0AEbE7vCufCABmR",
+                    "name": "AWS (IAM) account"
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3.2,
+            "position": [
+                592,
+                1024
+            ],
+            "id": "52b97c11-d628-436f-bfe4-2daf3b8c3f2c",
+            "name": "Merge"
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "edit",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-3-pro-image-preview",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-3-pro-image-preview (Nano Banana Pro)"
+                },
+                "prompt": "={{ $json.body.raw_prompt }}\n\npreset : {{ $json.body.style_suffix }}\n\nwidth: {{ $json.body.width }}\nheight : {{ $json.body.height }}\n\ncreativity : {{ $('Webhook Trigger1').item.json.body.creativity }}",
+                "images": {
+                    "values": [
+                        {
+                            "binaryPropertyName": "image"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1,
+            "position": [
+                96,
+                1136
+            ],
+            "id": "bd901ba7-cf80-4680-9f47-2ee1fa98b696",
+            "name": "Generate Image2",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "xRzdxymal77KXpkv",
+                    "name": "boostify paid api"
+                }
+            }
         }
     ],
     "connections": {
-        "Webhook Trigger": {
+        "Generate Image": {
             "main": [
                 [
                     {
-                        "node": "Generate Image 1",
+                        "node": "Upload a file5",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Image Data": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook Trigger1": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Image",
                         "type": "main",
                         "index": 0
                     },
                     {
-                        "node": "Generate Image 2",
+                        "node": "Generate Image2",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Generate Image 1": {
+        "Upload a file5": {
             "main": [
                 [
                     {
-                        "node": "Upload to S3 - Variant 1",
+                        "node": "Merge",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Generate Image 2": {
+        "Upload a file": {
             "main": [
                 [
                     {
-                        "node": "Upload to S3 - Variant 2",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Upload to S3 - Variant 1": {
-            "main": [
-                [
-                    {
-                        "node": "Merge All Uploads",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Upload to S3 - Variant 2": {
-            "main": [
-                [
-                    {
-                        "node": "Merge All Uploads",
+                        "node": "Merge",
                         "type": "main",
                         "index": 1
                     }
                 ]
             ]
         },
-        "Merge All Uploads": {
+        "Merge": {
             "main": [
                 [
                     {
-                        "node": "Collect S3 URLs",
+                        "node": "Extract Image Data",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Collect S3 URLs": {
+        "Generate Image2": {
             "main": [
                 [
                     {
-                        "node": "Respond to Webhook",
+                        "node": "Upload a file",
                         "type": "main",
                         "index": 0
                     }
@@ -256,13 +257,39 @@
             ]
         }
     },
-    "pinData": {},
-    "settings": {
-        "executionOrder": "v1"
+    "pinData": {
+        "Webhook Trigger1": [
+            {
+                "headers": {
+                    "host": "3.109.141.137:5678",
+                    "connection": "keep-alive",
+                    "content-type": "multipart/form-data; boundary=----formdata-undici-064271036599",
+                    "accept": "*/*",
+                    "accept-language": "*",
+                    "sec-fetch-mode": "cors",
+                    "user-agent": "node",
+                    "accept-encoding": "gzip, deflate",
+                    "content-length": "5998488"
+                },
+                "params": {},
+                "query": {},
+                "body": {
+                    "prompt": "change watermelon seeds from dark to white. improve the quality and don't change anything else",
+                    "raw_prompt": "change watermelon seeds from dark to white",
+                    "style_preset": "custom",
+                    "style_suffix": "improve the quality and don't change anything else",
+                    "width": "1024",
+                    "height": "1024",
+                    "creativity": "0.7",
+                    "variations": "2"
+                },
+                "webhookUrl": "http://3.109.141.137:5678/webhook/single-image",
+                "executionMode": "production"
+            }
+        ]
     },
-    "staticData": null,
     "meta": {
-        "templateCredsSetupCompleted": true
-    },
-    "tags": []
+        "templateCredsSetupCompleted": true,
+        "instanceId": "dd0b51edfb77c56ee9699a1415acf0bbcc2dcea8e82051b9ba489f8f7b5f4937"
+    }
 }
