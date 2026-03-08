@@ -9,9 +9,9 @@ We are assigning you the task of rebuilding and redesigning the frontend of our 
 I have attached a detailed PDF outlining the complete project requirements, but here are the high-level objectives:
 
 1. **Complete Redesign:** Create a premium, clean, white-themed UI with smooth animations.
-2. **Supabase Integration:** Implement Login/Signup. New users get $10 in free credits by default.
-3. **Settings Page:** A crucial page where users will input and save their AWS S3 credentials and n8n webhook URLs to the Supabase database.
-4. **Pricing Tiers:** Integrate the pricing structure (Free, Plus @ ₹250, Pro @ ₹499, and Enterprise).
+2. **Supabase Integration:** Implement Login/Signup based on Mobile Number/OTP. New users get $6 in free credits by default.
+3. **Settings Page & Workflows:** The settings page should manage basic profile info. The n8n workflow URLs and AWS S3 credentials will be linked internally later, so DO NOT include input fields for them on the settings page.
+4. **Pricing Tiers:** Integrate the pricing structure (Free $6, Plus @ ₹250, Pro @ ₹499, and Enterprise).
 5. **Timeline:** This is a 1-week sprint. The site must be fully ready and deployed by **March 16th, 2026**.
 
 The codebase is hosted on GitHub. I will be adding the `boostify` GitHub account as a collaborator shortly so you can clone the repository and get started immediately.

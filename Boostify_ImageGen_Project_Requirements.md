@@ -20,27 +20,25 @@ We are building a comprehensive, user-friendly SaaS platform for AI-powered prod
 
 ### 1. Authentication (Login / Signup)
 - **Flow:** Users must sign up or log in to access the platform.
-- **Provider:** Supabase Auth (Email & Password).
-- **Default Credits:** New signups automatically receive $10 worth of free credits.
+- **Provider:** Supabase Auth (Phone Number / OTP).
+- **Default Credits:** New signups automatically receive $6 worth of free credits.
 - **Route Protection:** Unauthenticated users should be redirected to the login page.
 
 ### 2. Pricing & Subscription Plans
 The platform will offer the following tiers:
-- **Free Plan:** $10 initial credits (Free)
+- **Free Plan:** $6 initial credits (Free)
 - **Plus Plan:** High quality, $50 credits/month — **₹250 INR**
 - **Pro Plan:** High quality, $100 credits/month — **₹499 INR**
 - **Enterprise Plan:** Custom workflows, very high quality — **Contact us at contact@boostifycorp.dev**
 
-### 3. Settings Page (Credentials Management)
-Users need a secure place to store their integration credentials. These must be saved to the Supabase database (`imagegen_user_settings` table) and linked to their `user_id`.
-- **AWS S3 Configuration:** Access Key ID, Secret Access Key, Region, Bucket Name.
-- **n8n Webhook URLs:** Input fields for the Amazon PDP Webhook URL and the Single Image Webhook URL.
-- **Cloud Sync:** Settings should auto-fill from Supabase when the user logs in on any device.
+### 3. Settings Page 
+- **Note on Credentials:** The AWS S3 and n8n webhook URLs will be provided centrally by the client later. They should **not** be included as user-configurable inputs on the settings page.
+- **User Profile:** Allow users to manage their basic profile information linked to their Supabase account.
 
 ### 4. Image Editor (Single Image Generation)
 - **Uploads:** Allow up to 3 reference images (minimum 1 required).
 - **Settings:** Prompt input, negative prompt, aspect ratio, style presets.
-- **Execution:** Sends a payload containing the images, prompt, logic parameters, and webhook URL to the user-defined n8n webhook.
+- **Execution:** Sends a payload containing the images, prompt, and logic parameters to the central n8n webhook.
 - **UI UX:** Display a loading state with an animated progress bar and elapsed time while waiting for the webhook response.
 
 ### 5. Amazon PDP (Catalogue Generation)
