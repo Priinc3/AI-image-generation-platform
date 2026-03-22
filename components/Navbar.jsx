@@ -1,16 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
     const pathname = usePathname();
-    const router = useRouter();
-    const { user, signOut } = useAuth();
     const [credits, setCredits] = useState(null);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
         const storedCredits = localStorage.getItem('usedCredits');
@@ -21,23 +17,6 @@ export default function Navbar() {
             remaining: 300 - used
         });
     }, []);
-
-    const handleLogout = async () => {
-        setIsLoggingOut(true);
-        try {
-            await signOut();
-            router.push('/auth');
-        } catch (error) {
-            console.error('Error signing out:', error);
-        } finally {
-            setIsLoggingOut(false);
-        }
-    };
-
-    const getUserDisplayName = () => {
-        if (!user?.email) return '';
-        return user.email.split('@')[0];
-    };
 
     return (
         <nav className="navbar">
@@ -85,25 +64,8 @@ export default function Navbar() {
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>/ $300</span>
                         </div>
                     )}
-
-                    {user && (
-                        <div className="user-section">
-                            <span className="user-name">
-                                {getUserDisplayName()}
-                            </span>
-                            <button
-                                onClick={handleLogout}
-                                disabled={isLoggingOut}
-                                className="logout-btn"
-                            >
-                                {isLoggingOut ? '...' : 'Logout'}
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
         </nav>
     );
 }
-
-
